@@ -1,37 +1,98 @@
 import express from "express";
 import { Response, Request, NextFunction } from "express";
 import { checkRequiredFields } from "../../helpers/commonValidator";
-import hosterModel from "../../models/Hoster/hosterModel";
+import UserDetailsModel from "../../models/Hoster/UserDetailsModel";
 import { hashPassword } from "../../helpers/hased";
 import generateToken from "../../helpers/token";
+import verifyModel from "../../models/Hoster/verifyModel";
+import otpGenerator from "otp-generator";
+import { CustomRequest } from "../../middlewares/token-decode";
+import documnetModel from "../../models/Hoster/documentModel";
+import agreementModel from "../../models/Hoster/signAgreement";
 
-export const signUp = async (req: Request, res: Response) => {
+const otp = otpGenerator.generate(6, {
+  upperCaseAlphabets: false,
+  lowerCaseAlphabets: false,
+  specialChars: false,
+  digits: true,
+});
+
+export const register = async (req: Request, res: Response) => {
   try {
-    const { name, email, password, confirmPassword, mobileNumber } = req.body;
+    const {
+      Name,
+      Pancard,
+      Address,
+      Return,
+      State,
+      FullName,
+      Email,
+      MobileNumber,
+      AccountOwner,
+      AccountType,
+      bankName,
+      accountNumber,
+      IFSC,
+    } = req.body;
+
     const requiredFields = [
-      "name",
-      "email",
-      "password",
-      "confirmPassword",
-      "mobileNumber",
+      "Name",
+      "Pancard",
+      "Address",
+      "Return",
+      "State",
+      "FullName",
+      "Email",
+      "MobileNumber",
+      "AccountOwner",
+      "AccountType",
+      "bankName",
+      "accountNumber",
+      "IFSC",
     ];
     const validationError = checkRequiredFields(req.body, requiredFields);
-    if (password != confirmPassword) {
+    const check = await verifyModel.findOne({
+      mobileNumber: MobileNumber,
+      isVerified: true,
+    });
+    if (!check) {
       return res.status(400).json({
         status: 400,
-        message: "password doesn't match",
+        message: "not allowed",
         data: "",
       });
     }
-    const hasedPassword = await hashPassword(String(password));
-    const newUser = new hosterModel({
-      name: name,
-      mobileNumber: mobileNumber,
-      email: email,
-      password: hasedPassword,
+    const exist = await UserDetailsModel.findOne({
+      email: Email,
     });
+    console.log("exist", !exist);
+
+    if (exist) {
+      return res.status(400).json({
+        status: 400,
+        message: "already exist",
+        data: "",
+      });
+    }
+    const newUser = new UserDetailsModel({
+      name: Name,
+      pancard: Pancard,
+      address: Address,
+      return: Return,
+      state: State,
+      fullName: FullName,
+      email: Email,
+      mobileNumber: MobileNumber,
+      accountOwner: AccountOwner,
+      accountType: AccountType,
+      bankName: bankName,
+      accountNumber: accountNumber,
+      ifsc: IFSC,
+    });
+    console.log("newUser", newUser);
+
     const tokenUser = {
-      _id: newUser._id.toString(),
+      _id: newUser._id,
       email: newUser.email,
       name: newUser.name,
       mobileNumber: newUser.mobileNumber,
@@ -41,11 +102,133 @@ export const signUp = async (req: Request, res: Response) => {
     return res.status(200).json({
       status: 200,
       message: "Succesfully",
-      data: tokenUser,
+      data: newUser,
       token: token,
     });
   } catch (e: any) {
     console.log("Error", e.message);
+    return res.status(400).json({
+      status: 400,
+      message: "somethig Went wrong",
+      data: "",
+    });
+  }
+};
+
+export const verify = async (req: Request, res: Response) => {
+  try {
+    const { mobileNumber } = req.params;
+    const { otp } = req.body;
+    const exist = await verifyModel.findOne({
+      mobileNumber: mobileNumber,
+      otp: otp,
+    });
+    if (!exist) {
+      return res.status(404).json({
+        status: 404,
+        meassage: "otp not match",
+      });
+    }
+    await verifyModel.findByIdAndUpdate(
+      exist._id,
+      {
+        isVerified: true,
+      },
+      {
+        new: true,
+      }
+    );
+    return res.status(200).json({
+      status: 200,
+      message: "verified",
+    });
+  } catch (e: any) {
+    console.log("Error", e.message);
+    return res.status(400).json({
+      status: 400,
+      message: "somethig Went wrong",
+      data: "",
+    });
+  }
+};
+
+export const sendOtp = async (req: Request, res: Response) => {
+  const { mobileNumber } = req.body;
+  const newUser = new verifyModel({
+    mobileNumber: mobileNumber,
+    otp: otp,
+  });
+  await newUser.save();
+  return res.status(200).json({
+    status: 200,
+    message: "otp sent",
+    data: newUser,
+  });
+};
+
+export const uploadDocumnet = async (req: CustomRequest, res: Response) => {
+  try {
+    const user = req.user;
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    console.log("req.files", files);
+
+    const panCardPath = files["pancard"]?.[0]?.path;
+    const chequePath = files["cheque"]?.[0]?.path;
+    const exist = await documnetModel.findOne({
+      hosterId: user?._id,
+    });
+    console.log("exist", exist);
+    if (exist) {
+      return res.status(400).json({
+        status: 400,
+        message: "already uploaded",
+        data: "",
+      });
+    }
+    const newData = new documnetModel({
+      hosterId: user?._id,
+      pancard: panCardPath,
+      cheques: chequePath,
+    });
+    await newData.save();
+    return res.status(200).json({
+      status: 200,
+      message: "done upoload",
+      data: "",
+    });
+  } catch (error: any) {
+    console.log("Error", error.message);
+    return res.status(400).json({
+      status: 400,
+      message: "somethig Went wrong",
+      data: "",
+    });
+  }
+};
+
+export const uploadAgreement = async (req: CustomRequest, res: Response) => {
+  try {
+    const userId = req.user?._id;
+    const agreement = req.file;
+    if (!agreement) {
+      return res.status(400).json({
+        status: 400,
+        message: "File not uploadesd",
+        data: "",
+      });
+    }
+    const newAgreement = new agreementModel({
+      hosterId: userId,
+      agreement: agreement.path,
+    });
+    await newAgreement.save();
+    return res.status(200).json({
+      status: 200,
+      message: "Uploaded Succefully",
+      data: newAgreement,
+    });
+  } catch (error: any) {
+    console.log("Error", error.message);
     return res.status(400).json({
       status: 400,
       message: "somethig Went wrong",

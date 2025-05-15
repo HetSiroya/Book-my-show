@@ -3,7 +3,6 @@ import { Request, Response, NextFunction } from "express";
 require("dotenv").config();
 import dotenv from "dotenv";
 
-
 export const SECRET_KEY: Secret =
   process.env.JWT_SECRET_KEY || "gfg_jwt_secret_key";
 
@@ -11,9 +10,11 @@ export interface TokenPayload extends JwtPayload {
   _id: string;
   email: string;
 }
-
 export interface CustomRequest extends Request {
-  user?: TokenPayload;
+  user?: any;
+  filePaths?: {
+    [key: string]: string;
+  };
 }
 
 export const auth = async (
@@ -28,12 +29,11 @@ export const auth = async (
       throw new Error("Token missing");
     }
 
-    
     const decoded = jwt.verify(token, SECRET_KEY) as TokenPayload;
     if (!decoded) {
       throw new Error("Invalid token");
     }
-  
+
     req.user = decoded;
 
     next();

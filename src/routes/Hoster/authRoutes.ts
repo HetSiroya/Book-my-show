@@ -1,13 +1,67 @@
 import express, { Request, Response, NextFunction } from "express";
-import { signUp } from "../../controllers/Hoster/authControlerHoster";
+import {
+  register,
+  sendOtp,
+  uploadAgreement,
+  uploadDocumnet,
+  verify,
+} from "../../controllers/Hoster/authControlerHoster";
+import { nextTick } from "process";
+import { uploadTo } from "../../middlewares/multer";
+import { auth } from "../../middlewares/token-decode";
 
 const router = express.Router();
 
-router.post("/signUp", async (req, res, next) => {
+router.post("/register", async (req, res, next) => {
   try {
-    await signUp(req, res);
+    await register(req, res);
   } catch (error) {
     next(error);
   }
 });
+
+router.post("/send-otp", async (req, res, next) => {
+  try {
+    await sendOtp(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/verify/:mobileNumber", async (req, res, next) => {
+  try {
+    await verify(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post(
+  "/upload-documnet",
+  uploadTo("Documnet").fields([
+    { name: "pancard", maxCount: 1 },
+    { name: "cheque", maxCount: 1 },
+  ]),
+  auth,
+  async (req, res, next) => {
+    try {
+      await uploadDocumnet(req, res);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post(
+  "/upload-sign-agreement",
+  auth,
+  uploadTo("sign-agreement").single("sign-agreement"),
+  async (req, res, next) => {
+    try {
+      await uploadAgreement(req, res);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 export default router;
