@@ -7,6 +7,7 @@ interface Admin {
   password: string;
   mobileNumber: number;
   isDeleted: boolean;
+  isApproved: boolean;
 }
 
 const User = new mongoose.Schema<Admin>(
@@ -33,10 +34,12 @@ const User = new mongoose.Schema<Admin>(
       type: Boolean,
       default: false,
     },
+    isApproved: { type: Boolean, required: true, default: false },
   },
   {
     timestamps: true,
   }
 );
-const userModel = model<Admin>("Admin", User);
-export default userModel;
+
+const adminModel = model<Admin>("Admin", User);
+export default adminModel;

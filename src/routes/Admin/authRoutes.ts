@@ -1,11 +1,19 @@
 import express, { Request, Response, NextFunction } from "express";
-import { signUp } from "../../controllers/Admin/authControlerAdmin";
+import { login, signUp } from "../../controllers/Admin/authControlerAdmin";
 
 const router = express.Router();
 
 router.post("/signUp", async (req, res, next) => {
   try {
     await signUp(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/login", async (req, res, next) => {
+  try {
+    await login(req, res);
   } catch (error) {
     next(error);
   }

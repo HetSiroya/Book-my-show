@@ -1,8 +1,8 @@
 import express from "express";
 import { Response, Request, NextFunction } from "express";
 import { checkRequiredFields } from "../../helpers/commonValidator";
-import UserDetailsModel from "../../models/Hoster/UserDetailsModel";
-import { hashPassword } from "../../helpers/hased";
+import hosterDetailsModel from "../../models/Hoster/hosterDetailsModel";
+import { comparePassword, hashPassword } from "../../helpers/hased";
 import generateToken from "../../helpers/token";
 import verifyModel from "../../models/Hoster/verifyModel";
 import otpGenerator from "otp-generator";
@@ -62,7 +62,7 @@ export const register = async (req: Request, res: Response) => {
         data: "",
       });
     }
-    const exist = await UserDetailsModel.findOne({
+    const exist = await hosterDetailsModel.findOne({
       email: Email,
     });
     console.log("exist", !exist);
@@ -74,7 +74,7 @@ export const register = async (req: Request, res: Response) => {
         data: "",
       });
     }
-    const newUser = new UserDetailsModel({
+    const newUser = new hosterDetailsModel({
       name: Name,
       pancard: Pancard,
       address: Address,
@@ -169,6 +169,16 @@ export const sendOtp = async (req: Request, res: Response) => {
 export const uploadDocumnet = async (req: CustomRequest, res: Response) => {
   try {
     const user = req.user;
+    const userExist = await hosterDetailsModel.findOne({
+      _id: user._id,
+    });
+    if (!userExist) {
+      return res.status(400).json({
+        status: 400,
+        message: "User dot exist",
+        data: "",
+      });
+    }
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     console.log("req.files", files);
 
@@ -217,6 +227,27 @@ export const uploadAgreement = async (req: CustomRequest, res: Response) => {
         data: "",
       });
     }
+    const userExist = await hosterDetailsModel.findOne({
+      _id: userId,
+    });
+    if (!userExist) {
+      return res.status(400).json({
+        status: 400,
+        message: "User dot exist",
+        data: "",
+      });
+    }
+    const exist = await agreementModel.findOne({
+      hosterId: userId,
+    });
+    console.log("exist", exist);
+    if (exist) {
+      return res.status(400).json({
+        status: 400,
+        message: "already uploaded",
+        data: "",
+      });
+    }
     const newAgreement = new agreementModel({
       hosterId: userId,
       agreement: agreement.path,
@@ -226,6 +257,54 @@ export const uploadAgreement = async (req: CustomRequest, res: Response) => {
       status: 200,
       message: "Uploaded Succefully",
       data: newAgreement,
+    });
+  } catch (error: any) {
+    console.log("Error", error.message);
+    return res.status(400).json({
+      status: 400,
+      message: "somethig Went wrong",
+      data: "",
+    });
+  }
+};
+
+export const login = async (req: Request, res: Response) => {
+  try {
+    const { mobileNumber, password } = req.body;
+    const requiredFields = ["mobileNumber", "password"];
+    const validationError = checkRequiredFields(req.body, requiredFields);
+    const user = await hosterDetailsModel.findOne({
+      mobileNumber: mobileNumber,
+      isVerified: true,
+    });
+    if (!user) {
+      return res.status(400).json({
+        status: 400,
+        message: "Please Sign Up",
+        data: "",
+      });
+    }
+    const check = comparePassword(String(password), String(user.passWord));
+    if (!check) {
+      return res.status(400).json({
+        status: 400,
+        message: "Password not match",
+        data: "",
+      });
+    }
+    const tokenUser = {
+      _id: user._id,
+      email: user.email,
+      name: user.name,
+      mobileNumber: user.mobileNumber,
+    };
+    const token = generateToken(tokenUser);
+    return res.status(200).json({
+      status: 200,
+      message: "Login Succesfully",
+      data: user,
+      token: token,
+      
     });
   } catch (error: any) {
     console.log("Error", error.message);

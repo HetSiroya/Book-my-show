@@ -2,7 +2,7 @@ import express from "express";
 import { Response, Request, NextFunction } from "express";
 import { checkRequiredFields } from "../../helpers/commonValidator";
 import adminModel from "../../models/Admin/adminModel";
-import { hashPassword } from "../../helpers/hased";
+import { comparePassword, hashPassword } from "../../helpers/hased";
 import generateToken from "../../helpers/token";
 
 export const signUp = async (req: Request, res: Response) => {
@@ -46,6 +46,53 @@ export const signUp = async (req: Request, res: Response) => {
     });
   } catch (e: any) {
     console.log("Error", e.message);
+    return res.status(400).json({
+      status: 400,
+      message: "somethig Went wrong",
+      data: "",
+    });
+  }
+};
+
+export const login = async (req: Request, res: Response) => {
+  try {
+    const { mobileNumber, password } = req.body;
+    const user = await adminModel.findOne({
+      mobileNumber: mobileNumber,
+    });
+    if (!user) {
+      return res.status(400).json({
+        status: 400,
+        message: "USer not found",
+        data: "",
+      });
+    }
+    const check = await comparePassword(
+      String(password),
+      String(user?.password)
+    );
+    // console.log("check", check);
+    if (!check) {
+      return res.status(400).json({
+        status: 400,
+        message: "password dont match",
+        data: "",
+      });
+    }
+    const tokenUser = {
+      _id: user._id.toString(),
+      email: user.email,
+      name: user.name,
+      mobileNumber: user.mobileNumber,
+    };
+    const token = generateToken(tokenUser);
+    return res.status(200).json({
+      status: 200,
+      message: "login succesfully",
+      data: user,
+      token: token,
+    });
+  } catch (error) {
     return res.status(400).json({
       status: 400,
       message: "somethig Went wrong",

@@ -11,7 +11,7 @@ interface User {
 
 function generateToken(user: User): string {
   let jwtSecret: string = process.env.JWT_SECRET_KEY || "gfg_jwt_secret_key";
-  const token: string = jwt.sign(user, jwtSecret);
+  const token: string = jwt.sign(user, jwtSecret  );
   return token;
 }
 

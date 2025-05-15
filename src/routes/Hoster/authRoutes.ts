@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from "express";
 import {
+  login,
   register,
   sendOtp,
   uploadAgreement,
@@ -64,4 +65,12 @@ router.post(
     }
   }
 );
+
+router.post("/login", async (req, res, next) => {
+  try {
+    await login(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
 export default router;

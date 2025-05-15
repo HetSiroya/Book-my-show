@@ -6,6 +6,7 @@ interface Idocument {
   hosterId: mongoose.Schema.Types.ObjectId;
   pancard: String;
   cheques: String;
+  isVerified: boolean;
 }
 
 const documnetSchema = new mongoose.Schema<Idocument>({
@@ -16,12 +17,13 @@ const documnetSchema = new mongoose.Schema<Idocument>({
   },
   cheques: {
     type: String,
-    // required: true,
+    required: true,
   },
   pancard: {
     type: String,
     required: true,
   },
+  isVerified: { type: Boolean, required: true, default: false },
 });
 const documnetModel = model<Idocument>("document", documnetSchema);
 export default documnetModel;
