@@ -1,14 +1,15 @@
-import { uploadAgreement } from "./../Hoster/authControlerHoster";
+import { uploadAgreement } from "../Hoster/authControllerHoster";
 import express from "express";
 import { Response, Request, NextFunction } from "express";
 import adminModel from "../../models/Admin/adminModel";
 import { CustomRequest } from "../../middlewares/token-decode";
 import hosterDetailsModel from "../../models/Hoster/hosterDetailsModel";
 import documnetModel from "../../models/Hoster/documentModel";
-import agreementModel from "../../models/Hoster/signAgreement";
+import agreementModel from "../../models/Hoster/signAgreementModel";
 import { generatePassword } from "../../helpers/passwordGenerator";
 import sendEmail from "../../helpers/sendMail";
 import { hashPassword } from "../../helpers/hased";
+import showModel from "../../models/Hoster/showModel";
 
 export const getHoster = async (req: CustomRequest, res: Response) => {
   try {
@@ -197,6 +198,124 @@ BookMyShow`
     return res.status(400).json({
       status: 400,
       message: "Somethig Went Wrong ",
+      data: "",
+    });
+  }
+};
+
+export const getAllShow = async (req: CustomRequest, res: Response) => {
+  try {
+    const userId = req.user?._id;
+    const check = await adminModel.findById(userId);
+    const { status } = req.body;
+    if (!check) {
+      return res.status(400).json({
+        status: 400,
+        message: "User not found",
+        data: "",
+      });
+    }
+    const data = await showModel.find();
+    return res.status(200).json({
+      status: 200,
+      message: "All Show",
+      data: data,
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    return res.status(400).json({
+      status: 400,
+      message: "somethig Went wrong",
+      data: "",
+    });
+  }
+};
+
+export const approveShow = async (req: CustomRequest, res: Response) => {
+  try {
+    const userId = req.user._id;
+    const { showId } = req.params;
+    const { action } = req.body;
+    console.log("action", action);
+
+    const userExist = await adminModel.findById(userId);
+    if (!userExist) {
+      return res.status(400).json({
+        status: 400,
+        message: "user dont exist ",
+        data: "",
+      });
+    }
+    const showExist = await showModel.findById(showId);
+    if (!showExist) {
+      return res.status(400).json({
+        status: 400,
+        message: "show dont exist ",
+        data: "",
+      });
+    }
+    const show = await showModel.findByIdAndUpdate(
+      showId,
+      {
+        status: action,
+      },
+      {
+        new: true,
+      }
+    );
+
+    const hoster = await hosterDetailsModel.findById(show?.hosterId);
+    if (!hoster) {
+      return res.status(400).json({
+        status: 400,
+        message: "user dont exist ",
+        data: "",
+      });
+    }
+    if (action == "approved") {
+      sendEmail(
+        hoster?.email,
+        `Approval Confirmation for ${showExist.name}`,
+        `Dear sir/mam,
+
+Thank you for sending over the approval for ${showExist.name}. We have reviewed the details and are pleased to confirm our approval as well.
+
+We appreciate your prompt coordination and look forward to moving ahead with the preparations. Please let us know the next steps or if any additional input is required from our side.
+
+Best regards
+BookMyShow
+`
+      );
+    }
+
+    if (action == "rejected") {
+      console.log("rejected");
+
+      sendEmail(
+        hoster?.email,
+        "Show Proposal – Regretfully Declined",
+        `Dear Sir\Mam,
+
+Thank you for submitting the proposal for ${showExist.name}. We appreciate the time and effort your team has put into preparing the details.
+
+After careful consideration, we regret to inform you that we will not be moving forward with the approval for this show. This decision was made based on [brief reason, if appropriate—e.g., scheduling conflicts, budget constraints, alignment with current priorities, etc.].
+
+We value your interest and hope to have the opportunity to collaborate on future projects. Please don’t hesitate to reach out with any new proposals or ideas.
+
+Wishing you all the best.`
+      );
+    }
+
+    return res.status(200).json({
+      status: 200,
+      message: "Show added succesfully",
+      data: show,
+    });
+  } catch (error: any) {
+    console.log(error.message);
+    return res.status(400).json({
+      status: 400,
+      message: "somethig Went wrong",
       data: "",
     });
   }

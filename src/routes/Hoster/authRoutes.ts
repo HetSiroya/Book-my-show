@@ -6,7 +6,7 @@ import {
   uploadAgreement,
   uploadDocumnet,
   verify,
-} from "../../controllers/Hoster/authControlerHoster";
+} from "../../controllers/Hoster/authControllerHoster";
 import { nextTick } from "process";
 import { uploadTo } from "../../middlewares/multer";
 import { auth } from "../../middlewares/token-decode";

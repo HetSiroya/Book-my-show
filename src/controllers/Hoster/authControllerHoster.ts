@@ -8,7 +8,7 @@ import verifyModel from "../../models/Hoster/verifyModel";
 import otpGenerator from "otp-generator";
 import { CustomRequest } from "../../middlewares/token-decode";
 import documnetModel from "../../models/Hoster/documentModel";
-import agreementModel from "../../models/Hoster/signAgreement";
+import agreementModel from "../../models/Hoster/signAgreementModel";
 
 const otp = otpGenerator.generate(6, {
   upperCaseAlphabets: false,
@@ -304,7 +304,6 @@ export const login = async (req: Request, res: Response) => {
       message: "Login Succesfully",
       data: user,
       token: token,
-      
     });
   } catch (error: any) {
     console.log("Error", error.message);
